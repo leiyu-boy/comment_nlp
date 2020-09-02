@@ -2,18 +2,12 @@
 # @Time     : 2020/9/2 12:08 上午
 # @Author   : yu.lei
 import pickle
-
-import jieba
-import joblib
-import numpy as np
-import pandas as pd
-# 逻辑回归
-from gensim.models import Word2Vec
 from sklearn import neighbors
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
@@ -67,6 +61,13 @@ def xgb(train_X, train_y):
         pickle.dump(model, fp)
 
 
+def mlp_model(train_X, train_y):
+    model = MLPClassifier()
+    model.fit(train_X, train_y)
+    with open('{}/models/mlp_model.pkl'.format(CURRENT_PATH), 'wb') as fp:
+        pickle.dump(model, fp)
+
+
 def model_train(ml_type):
     with open('{}/data/train_x.pkl'.format(CURRENT_PATH), 'rb') as fp:
         train_X = pickle.load(fp)
@@ -89,3 +90,8 @@ def model_train(ml_type):
         knn(train_X, train_y)
     elif ml_type == 'xgb':
         xgb(train_X, train_y)
+    elif ml_type == 'mlp':
+        mlp_model(train_X, train_y)
+
+
+model_train('mlp')
