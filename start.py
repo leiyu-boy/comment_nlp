@@ -7,6 +7,7 @@ import re
 
 import jieba
 import joblib
+import numpy
 from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
 
@@ -87,7 +88,7 @@ return:分类值，1为差评，0为好评
 
 def emotion_ml_analy(seg, vec_model, model):
     word_vec = seg_vec(vec_model, jieba.lcut(seg))
-    if model in ['knn', 'NB']:
+    if model == 'NB':
         standard = joblib.load('emotion_ml/models/standard_model.pkl')
         word_vec = standard.transform(word_vec)
     return int(model.predict(word_vec))
@@ -109,6 +110,27 @@ class ResultAnaly(object):
         return data[(data.pre_y == 0) & (data.y == 0)].shape[0] / data[data.y == 0].shape[0]
 
 
+def result_graph(data):
+    import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.rcParams['font.sans-serif'] = ['SimHei']
+    bar_width = 0.2
+    x = range(data.shape[1])
+    x_precision = x
+    x_recall = [i + bar_width + 0.1 for i in x]
+    num_precision = list(data.loc['precision', :])
+    num_recall = list(data.loc['recall', :])
+    plt.figure(figsize=(20, 10), dpi=100)
+    plt.bar(x_precision, height=num_precision, width=bar_width, color='#CC6600', label="precision")
+    plt.bar(x_recall, height=num_recall, width=bar_width, color='#999999', label="recall")
+    plt.xticks([index + 0.25 for index in x], list(data.columns), fontsize=16)
+    plt.yticks(numpy.arange(0, 1, 0.1))
+    plt.title('京东商品评论情感分析评估', fontsize=18)
+    plt.legend(fontsize=14)
+    plt.grid(linestyle='--', axis='y')
+    plt.show()
+
+
 if __name__ == '__main__':
     # 若已有数据，注释掉下面的一行即可
     # prepare_data()
@@ -126,14 +148,20 @@ if __name__ == '__main__':
     # df.to_csv('Data/dict_comment.csv', index=False, encoding='utf-8')
     # exit()
     # 基于机器学习
-    ml_types = ['NB', 'knn', 'xgb']
+    ml_types = ['mlp', 'knn']
     for ml_type in ml_types:
         print(ml_type)
-        model_train(ml_type)
+        # model_train(ml_type)
         vec_model = Word2Vec.load('emotion_ml/models/word_vec')
         model = joblib.load('emotion_ml/models/{}_model.pkl'.format(ml_type))
         df['pre_y'] = df.word.apply(lambda x: emotion_ml_analy(x, vec_model, model))
         df.to_csv('Data/{}_comment.csv'.format(ml_type), index=False, encoding='utf-8')
+    ml_types = ['dict', 'logistic', 'svm', 'random_forest', 'NB', 'knn', 'xgb', 'mlp']
+    result_dict = dict()
+    for ml_type in ml_types:
         result_analy = ResultAnaly(ml_type)
-        print(result_analy.precision(), result_analy.recall())
+        result_dict[ml_type] = [result_analy.precision(), result_analy.recall()]
+    df = pd.DataFrame(result_dict, index=['precision', 'recall'])
+    df.to_csv('Data/result_pg.csv', encoding='utf-8')
+    result_graph(df)
     # pass

@@ -12,7 +12,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 from emotion_ml import CURRENT_PATH
-
+import tensorflow as tf
 
 # 逻辑回归
 def logistic(train_X, train_y):
@@ -66,6 +66,14 @@ def mlp_model(train_X, train_y):
     model.fit(train_X, train_y)
     with open('{}/models/mlp_model.pkl'.format(CURRENT_PATH), 'wb') as fp:
         pickle.dump(model, fp)
+
+
+def lstm_model(train_X, train_y):
+    batchSize = 24
+    lstmUnits = 64
+    numClasses = 2
+    iterations = 50000
+    tf.reset
 
 
 def model_train(ml_type):
