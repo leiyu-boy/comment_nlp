@@ -5,11 +5,15 @@
 # 准备数据
 import re
 
+import jieba
+import joblib
+from gensim.models import Word2Vec
 from sklearn.model_selection import train_test_split
 
 from emotion_dict.dict_analy import filter_stop_words, match_word, cal_score
 from emotion_dict.dict_deal import emotion_dict_deal
-from emotion_ml.data_deal import get_word_vec_model
+from emotion_ml.data_deal import get_word_vec_model, seg_vec
+from emotion_ml.train import model_train
 from reptiles_jd.deal import remove_duplicate
 from reptiles_jd.reptile import wares_search
 import pandas as pd
@@ -43,58 +47,50 @@ def split_data():
     deal_df2.to_csv('Data/deal_great_comment.csv', index=False, encoding='utf-8')
 
 
-def dup():
-    df1 = pd.read_csv('Data/bad_comment.csv', header=None, names=['word'])
-    df2 = pd.read_csv('Data/great_comment.csv', header=None, names=['word'])
-    print(df1.word.value_counts())
-    print(df2.word.value_counts())
+'''
+如果需要重新整理词典，则boolean_dict_deal=True
+border为分类阈值
+seg为单个句子
+df为待分析的文件
+all_score为情感分
+pre_y为分类结果，1为好评，0为正差评
+'''
 
 
-# 如果需要重新整理词典，则boolean_dict_deal=True
-def emotion_dict_analy(boolean_dict_deal=False):
+def emotion_dict_analy(seg, boolean_dict_deal=False, border=0):
+    print(seg)
     if boolean_dict_deal:
         emotion_dict_deal()
-
-    # 单独分析某个句子
-    # sentence = '非常不好，完全不值这个价，太坑爹了'
-    # seg_list = re.split('，|；|。', sentence)
-    # print(seg_list)
-    # all_score = 0
-    # for seg in seg_list:
-    #     word_list = filter_stop_words(seg)
-    #     print(word_list)
-    #     word, index, weight = match_word(word_list)
-    #     print(word, index, weight)
-    #     score = cal_score(word_list, word, index, weight)
-    #     print(score)
-    #     all_score += score
-    # print(all_score)
-
-    # 对测试文件批量分析
-    def get_score(x):
-        seg_list = re.split('，|；|。', x)
-        all_score = 0
-        for seg in seg_list:
-            word_list = filter_stop_words(seg)
-            word, index, weight = match_word(word_list)
-            score = cal_score(word_list, word, index, weight)
-            all_score += score
-        print(x, all_score)
-        return all_score
-
-    great_df = pd.read_csv('Data/test_great_comment.csv', header=None, names=['word'])
-    bad_df = pd.read_csv('Data/test_bad_comment.csv', header=None, names=['word'])
-    great_df['y'] = 0
-    bad_df['y'] = 1
-    df = pd.concat([great_df, bad_df])
-    df['pre_y'] = df.word.apply(lambda x: 1 if get_score(x) < 0 else 0)
-    df.to_csv('Data/dict_comment.csv', index=False, encoding='utf-8')
+    seg_list = re.split('，|；|。', seg)
+    all_score = 0
+    for seg in seg_list:
+        word_list = filter_stop_words(seg)
+        word, index, weight = match_word(word_list)
+        score = cal_score(word_list, word, index, weight)
+        all_score += score
+    if score < border:
+        pre_y = 1
+    else:
+        pre_y = 0
+    print(all_score)
+    return all_score, pre_y
 
 
-# 是否需要重新训练词向量，如果需要，则boolean_train_vec_model=True
-def emotion_ml_analy(ml_type, boolean_train_vec_model=False):
-    # 得到词向量模型、训练集，如果已存在，注释下面一行
-    get_word_vec_model()
+'''
+ml_type为模型训练采用的算法
+是否需要重新训练词向量，如果需要，则boolean_train_vec_model=True
+是否需要重新训练模型，如果需要，则boolean_train=True
+seg为待分析的句子
+return:分类值，1为差评，0为好评
+'''
+
+
+def emotion_ml_analy(seg, vec_model, model):
+    word_vec = seg_vec(vec_model, jieba.lcut(seg))
+    if model in ['knn', 'NB']:
+        standard = joblib.load('emotion_ml/models/standard_model.pkl')
+        word_vec = standard.transform(word_vec)
+    return int(model.predict(word_vec))
 
 
 class ResultAnaly(object):
@@ -107,27 +103,37 @@ class ResultAnaly(object):
         data = self.data
         return data[data.y == data.pre_y].shape[0] / data.shape[0]
 
-    # 好评召回率
+    # 坏评召回率
     def recall(self):
         data = self.data
         return data[(data.pre_y == 0) & (data.y == 0)].shape[0] / data[data.y == 0].shape[0]
-
-
-def look_data():
-    comment = ['bad', 'great']
-    for i in comment:
-        df1 = pd.read_csv('Data/{}_comment.csv'.format(i), header=None)
-        df2 = pd.read_csv('Data/deal_{}_comment.csv'.format(i), header=None)
-        print(df1.shape[0], df2.shape[0])
 
 
 if __name__ == '__main__':
     # 若已有数据，注释掉下面的一行即可
     # prepare_data()
     # split_data()
-    # result_analy('dict')
-    # look_data()
-    # emotion_ml_analy('svm')
-    dict_analy = ResultAnaly('dict')
-    print(dict_analy.precision(), dict_analy.recall())
+    # 单个句子
+    seg = '非常不好，完全不值这个价，太坑爹了'
+    # 文件
+    great_df = pd.read_csv('Data/test_great_comment.csv', header=None, names=['word'])
+    bad_df = pd.read_csv('Data/test_bad_comment.csv', header=None, names=['word'])
+    great_df['y'] = 0
+    bad_df['y'] = 1
+    df = pd.concat([great_df, bad_df])
+    # 基于情感词典的分析
+    # df[['score', 'pre_y']] = df.apply(lambda x: emotion_dict_analy(x.word), axis=1, result_type='expand')
+    # df.to_csv('Data/dict_comment.csv', index=False, encoding='utf-8')
+    # exit()
+    # 基于机器学习
+    ml_types = ['NB', 'knn', 'xgb']
+    for ml_type in ml_types:
+        print(ml_type)
+        model_train(ml_type)
+        vec_model = Word2Vec.load('emotion_ml/models/word_vec')
+        model = joblib.load('emotion_ml/models/{}_model.pkl'.format(ml_type))
+        df['pre_y'] = df.word.apply(lambda x: emotion_ml_analy(x, vec_model, model))
+        df.to_csv('Data/{}_comment.csv'.format(ml_type), index=False, encoding='utf-8')
+        result_analy = ResultAnaly(ml_type)
+        print(result_analy.precision(), result_analy.recall())
     # pass
