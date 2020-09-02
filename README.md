@@ -6,8 +6,8 @@
 - 爬取数据的逻辑见reptiles_jd/reptile.py
 #### 基于情感词典的情感分析
 - 情感词典的来源
-    - 情感词莱阳BonsonNLP与知网整合
-    - 停用词莱阳snowNLP
+    - 情感词来源BonsonNLP与知网整合
+    - 停用词来源snowNLP
     - 程度副词来源知网
     - 否定词在其他博客中下载
 - 整理情感词典(emotion_dict/dict_deal.py)

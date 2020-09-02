@@ -97,9 +97,20 @@ def emotion_ml_analy(ml_type, boolean_train_vec_model=False):
     get_word_vec_model()
 
 
-class ResultAnaly:
-    def __init__(self, data):
-        pass
+class ResultAnaly(object):
+    def __init__(self, analy_method):
+        df = pd.read_csv('Data/{}_comment.csv'.format(analy_method))
+        self.data = df
+
+    # 准确率
+    def precision(self):
+        data = self.data
+        return data[data.y == data.pre_y].shape[0] / data.shape[0]
+
+    # 好评召回率
+    def recall(self):
+        data = self.data
+        return data[(data.pre_y == 0) & (data.y == 0)].shape[0] / data[data.y == 0].shape[0]
 
 
 def look_data():
@@ -116,5 +127,7 @@ if __name__ == '__main__':
     # split_data()
     # result_analy('dict')
     # look_data()
-    emotion_ml_analy('svm')
-    pass
+    # emotion_ml_analy('svm')
+    dict_analy = ResultAnaly('dict')
+    print(dict_analy.precision(), dict_analy.recall())
+    # pass
