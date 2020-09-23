@@ -123,11 +123,12 @@ def result_graph(data):
     plt.figure(figsize=(20, 10), dpi=100)
     plt.bar(x_precision, height=num_precision, width=bar_width, color='#CC6600', label="precision")
     plt.bar(x_recall, height=num_recall, width=bar_width, color='#999999', label="recall")
-    plt.xticks([index + 0.25 for index in x], list(data.columns), fontsize=16)
+    plt.xticks([index + 0.15 for index in x], list(data.columns), fontsize=16)
     plt.yticks(numpy.arange(0, 1, 0.1))
     plt.title('京东商品评论情感分析评估', fontsize=18)
     plt.legend(fontsize=14)
     plt.grid(linestyle='--', axis='y')
+    plt.savefig('result.png')
     plt.show()
 
 
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     # df.to_csv('Data/dict_comment.csv', index=False, encoding='utf-8')
     # exit()
     # 基于机器学习
-    ml_types = ['mlp', 'knn']
+    ml_types = []
     for ml_type in ml_types:
         print(ml_type)
         # model_train(ml_type)
@@ -156,6 +157,8 @@ if __name__ == '__main__':
         model = joblib.load('emotion_ml/models/{}_model.pkl'.format(ml_type))
         df['pre_y'] = df.word.apply(lambda x: emotion_ml_analy(x, vec_model, model))
         df.to_csv('Data/{}_comment.csv'.format(ml_type), index=False, encoding='utf-8')
+
+    # 模型评估
     ml_types = ['dict', 'logistic', 'svm', 'random_forest', 'NB', 'knn', 'xgb', 'mlp']
     result_dict = dict()
     for ml_type in ml_types:
@@ -164,4 +167,3 @@ if __name__ == '__main__':
     df = pd.DataFrame(result_dict, index=['precision', 'recall'])
     df.to_csv('Data/result_pg.csv', encoding='utf-8')
     result_graph(df)
-    # pass

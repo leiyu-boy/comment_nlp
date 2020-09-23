@@ -14,6 +14,7 @@ from xgboost import XGBClassifier
 from emotion_ml import CURRENT_PATH
 import tensorflow as tf
 
+
 # 逻辑回归
 def logistic(train_X, train_y):
     model = LogisticRegression(solver='liblinear')
@@ -100,6 +101,3 @@ def model_train(ml_type):
         xgb(train_X, train_y)
     elif ml_type == 'mlp':
         mlp_model(train_X, train_y)
-
-
-model_train('mlp')
