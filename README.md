@@ -15,6 +15,7 @@
 - 词向量处理
     使用Word2Vec构建词向量，代码见emotion_ml/data_deal.py
 - 训练模型
-    使用多种机器学习算法训练数据，对比结果如下
+    使用多种机器学习算法训练数据，代码见emotion_ml/train.py
+![结果对比分析](result.png)
 
   
